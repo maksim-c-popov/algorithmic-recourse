@@ -1,0 +1,14 @@
+python main.py \
+	--scm_class adult \
+	--dataset_class adult \
+	--classifier_class nonsens_mlp \
+	--experimental_setups m0_true m1_alin m1_akrr \
+	--lambda_lcb 1 \
+	--optimization_approach brute_force \
+	--grid_search_bins 4 -e 9 \
+	--sensitive_attribute_nodes x1 x2 x3 \
+	--non_intervenable_nodes x4 \
+	--num_train_samples 1500 \
+	--num_fair_samples 10 \
+	--batch_number 0 \
+	--sample_count 1000
