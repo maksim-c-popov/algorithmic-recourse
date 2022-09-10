@@ -20,6 +20,7 @@ import new.sampling as sampling
 import new.action_set_processing as action_set_processing
 from new.classes.instance import Instance
 from scatter import *
+from multiprocessing.pool import Pool
 
 
 def prettyPrintDict(my_dict):
@@ -171,98 +172,100 @@ def createAndSaveMetricsTable(per_instance_results, recourse_types, experiment_f
   plt.close()
 
 
+def init_process(args, objs, recourse_types):
+  global args_g
+  global objs_g
+  global recourse_types_g
+
+  args_g = args
+  objs_g = objs
+  recourse_types_g = recourse_types
+
+def recourseProcess(factual_instance):
+  global args_g
+  global objs_g
+  global recourse_types_g
+
+  enumeration_idx, (key, value) = factual_instance
+  factual_instance_idx = f'sample_{key}'
+  factual_instance = value
+
+  ######### hack; better to pass around factual_instance_obj always ##########
+  factual_instance = factual_instance.copy()
+  factual_instance_obj = Instance(factual_instance, factual_instance_idx)
+  ############################################################################
+
+  #folder_path = f'{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}'
+  #if not os.path.exists(folder_path):
+    #os.mkdir(folder_path)
+
+  print(f'[INFO] Processing instance `{factual_instance_obj.instance_idx}` (#{enumeration_idx + 1})...')
+
+  #per_instance_results[factual_instance_obj.instance_idx] = {}
+  #per_instance_results[factual_instance_obj.instance_idx]['factual_instance'] = factual_instance_obj.dict('endogenous_and_exogenous')
+
+  for recourse_type in recourse_types_g:
+
+    tmp = {}
+    save_path = f''#{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}/{recourse_type}'
+
+    start_time = time.time()
+    opt_set, full_set, shap_vals, shap_set =  action_set_processing.computeOptimalActionSet(
+      args_g,
+      objs_g,
+      factual_instance_obj,
+      save_path,
+      recourse_type,
+    )
+    tmp['optimal_action_set'] = opt_set
+    tmp['full_set'] = full_set
+    tmp['shap_vals'] = shap_vals
+    tmp['shap_set'] = shap_set
+    end_time = time.time()
+
+    tmp['default_to_MO'] = False
+
+
+    tmp['runtime'] = np.around(end_time - start_time, 3)
+
+    tmp['scf_validity']  = utils.isPointConstraintSatisfied(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm0_true')
+    try:
+      # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
+      tmp['ic_m2_true'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm2_true'), 3)
+    except:
+      tmp['ic_m2_true'] = np.NaN
+
+    try:
+      # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
+      if recourse_type in global_vars.ACCEPTABLE_DISTR_RECOURSE and recourse_type != 'm2_true':
+        tmp['ic_rec_type'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], recourse_type), 3)
+      else:
+        tmp['ic_rec_type'] = np.NaN
+    except:
+      tmp['ic_rec_type'] = np.NaN
+
+    if args_g.classifier_class in global_vars.FAIR_MODELS:
+      # to somewhat allow for comparison of cost_valid and dist_to_db in fair experiments, do not normalize the former
+      tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], range_normalized=False)
+    else:
+      tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'])
+
+    tmp['cost_valid'] = tmp['cost_all'] if tmp['scf_validity'] else np.NaN
+    tmp['dist_to_db'] = measureDistanceToDecisionBoundary(args_g, objs_g, factual_instance_obj)
+
+    return tmp
 
 def runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types, file_suffix=''):
   ''' optimal action set: figure + table '''
 
-  dir_path = f'{experiment_folder_name}/_optimization_curves'
-  if not os.path.exists(dir_path):
-    os.mkdir(dir_path)
-
   per_instance_results = {}
-  for enumeration_idx, (key, value) in enumerate(factual_instances_dict.items()):
-    factual_instance_idx = f'sample_{key}'
-    factual_instance = value
 
-    ######### hack; better to pass around factual_instance_obj always ##########
-    factual_instance = factual_instance.copy()
-    factual_instance_obj = Instance(factual_instance, factual_instance_idx)
-    ############################################################################
-
-    folder_path = f'{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}'
-    if not os.path.exists(folder_path):
-      os.mkdir(folder_path)
-
-    print(f'\n\n\n[INFO] Processing instance `{factual_instance_obj.instance_idx}` (#{enumeration_idx + 1} / {len(factual_instances_dict.keys())})...')
-
-    per_instance_results[factual_instance_obj.instance_idx] = {}
-    per_instance_results[factual_instance_obj.instance_idx]['factual_instance'] = factual_instance_obj.dict('endogenous_and_exogenous')
-
-    for recourse_type in recourse_types:
-
-      tmp = {}
-      save_path = f'{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}/{recourse_type}'
-      if not os.path.exists(save_path):
-        os.mkdir(save_path)
-
-      start_time = time.time()
-      tmp['optimal_action_set'] = action_set_processing.computeOptimalActionSet(
-        args,
-        objs,
-        factual_instance_obj,
-        save_path,
-        recourse_type,
-      )
-      end_time = time.time()
-
-      # If a solution is NOT found, return the minimum observable instance (the
-      # action will be to intervene on all variables with intervention values set
-      # to the corresponding dimension of the nearest observable instance)
-      tmp['default_to_MO'] = False
-      # if tmp['optimal_action_set'] == dict():
-      #   tmp['optimal_action_set'] = getNearestObservableInstance(args, objs, factual_instance)
-      #   tmp['default_to_MO'] = True
-
-      tmp['runtime'] = np.around(end_time - start_time, 3)
-
-      # print(f'\t[INFO] Computing SCF validity and Interventional Confidence measures for optimal action `{str(tmp["optimal_action_set"])}`...')
-
-      tmp['scf_validity']  = utils.isPointConstraintSatisfied(args, objs, factual_instance_obj, tmp['optimal_action_set'], 'm0_true')
-      try:
-        # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
-        tmp['ic_m2_true'] = np.around(utils.computeLowerConfidenceBound(args, objs, factual_instance_obj, tmp['optimal_action_set'], 'm2_true'), 3)
-      except:
-        tmp['ic_m2_true'] = np.NaN
-
-      try:
-        # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
-        if recourse_type in global_vars.ACCEPTABLE_DISTR_RECOURSE and recourse_type != 'm2_true':
-          tmp['ic_rec_type'] = np.around(utils.computeLowerConfidenceBound(args, objs, factual_instance_obj, tmp['optimal_action_set'], recourse_type), 3)
-        else:
-          tmp['ic_rec_type'] = np.NaN
-      except:
-        tmp['ic_rec_type'] = np.NaN
-
-      if args.classifier_class in global_vars.FAIR_MODELS:
-        # to somewhat allow for comparison of cost_valid and dist_to_db in fair experiments, do not normalize the former
-        tmp['cost_all'] = action_set_processing.measureActionSetCost(args, objs, factual_instance_obj, tmp['optimal_action_set'], range_normalized=False)
-      else:
-        tmp['cost_all'] = action_set_processing.measureActionSetCost(args, objs, factual_instance_obj, tmp['optimal_action_set'])
-
-      tmp['cost_valid'] = tmp['cost_all'] if tmp['scf_validity'] else np.NaN
-      tmp['dist_to_db'] = measureDistanceToDecisionBoundary(args, objs, factual_instance_obj)
-
-
-      # print(f'\t done.')
-
-      per_instance_results[factual_instance_obj.instance_idx][recourse_type] = tmp
-
-    print(f'[INFO] Saving (overwriting) results...\t', end='')
-    pickle.dump(per_instance_results, open(f'{experiment_folder_name}/_per_instance_results{file_suffix}', 'wb'))
-    pprint(per_instance_results, open(f'{experiment_folder_name}/_per_instance_results{file_suffix}.txt', 'w'))
-    print(f'done.')
-
-    createAndSaveMetricsTable(per_instance_results, recourse_types, experiment_folder_name, file_suffix)
+  with Pool(initializer=init_process, initargs=(args, objs, recourse_types,)) as pool:
+        # issue tasks into the process pool
+        result = pool.map(recourseProcess, enumerate(factual_instances_dict.items()))
+        # read results from the queue as they become available
+        for i in range(len(result)):
+            per_instance_results[i] = result[i]
 
   return per_instance_results
 

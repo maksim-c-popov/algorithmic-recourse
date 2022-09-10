@@ -105,7 +105,7 @@ def trainFairClassifier(model_class, fair_kernel_type):
 @Memoize
 def loadModelForDataset(model_class, dataset_class, scm_class = None, num_train_samples = 1e5, fair_nodes = None, fair_kernel_type = None, experiment_folder_name = None):
 
-  log_file = sys.stdout if experiment_folder_name == None else open(f'{experiment_folder_name}/log_training.txt','w')
+  #log_file = sys.stdout if experiment_folder_name == None else open(f'{experiment_folder_name}/log_training.txt','w')
 
   if not (model_class in {'lr', 'mlp', 'tree', 'forest'}) and not (model_class in global_vars.FAIR_MODELS):
       raise Exception(f'{model_class} not supported.')
@@ -156,23 +156,23 @@ def loadModelForDataset(model_class, dataset_class, scm_class = None, num_train_
   training_setup_string = f'[INFO] Training `{model_class}` on {X_train.shape[0]:,} samples ' + \
     f'(%{100 * X_train.shape[0] / (X_train.shape[0] + X_test.shape[0]):.2f}' + \
     f'of {X_train.shape[0] + X_test.shape[0]:,} samples)...'
-  print(training_setup_string, file=log_file)
-  print(training_setup_string)
+  #print(training_setup_string, file=log_file)
+  #print(training_setup_string)
 
   model_trained = model_pretrain.fit(X_train, y_train)
 
   train_accuracy_string = f'\t[INFO] Training accuracy: %{accuracy_score(y_train, model_trained.predict(X_train)) * 100:.2f}.'
   test_accuracy_string = f'\t[INFO] Testing accuracy: %{accuracy_score(y_test, model_trained.predict(X_test)) * 100:.2f}.'
 
-  print(train_accuracy_string, file=log_file)
-  print(test_accuracy_string, file=log_file)
-  print(train_accuracy_string)
-  print(test_accuracy_string)
+  #print(train_accuracy_string, file=log_file)
+  #print(test_accuracy_string, file=log_file)
+  #print(train_accuracy_string)
+  #print(test_accuracy_string)
 
   if hasattr(model_trained, 'best_estimator_'):
     hyperparams_string = f'\t[INFO] Hyper-parameters of best classifier selected by CV:\n\t{model_trained.best_estimator_}'
-    print(hyperparams_string, file=log_file)
-    print(hyperparams_string)
+    #print(hyperparams_string, file=log_file)
+    #print(hyperparams_string)
 
   # shouldn't deal with bad model; arbitrarily select offset to be 70% accuracy
   tmp = accuracy_score(y_train, model_trained.predict(X_train))
@@ -190,22 +190,20 @@ def loadModelForDataset(model_class, dataset_class, scm_class = None, num_train_
   feature_names = dataset_obj.getInputAttributeNames('kurz') # easier to read (nothing to do with one-hot vs non-hit!)
   if model_class == 'tree':
     if SIMPLIFY_TREES:
-      print('[INFO] Simplifying decision tree...', end = '', file=log_file)
+      #print('[INFO] Simplifying decision tree...', end = '', file=log_file)
       model_trained.tree_ = treeUtils.simplifyDecisionTree(model_trained, False)
-      print('\tdone.', file=log_file)
+      #print('\tdone.', file=log_file)
     # treeUtils.saveTreeVisualization(model_trained, model_class, '', X_test, feature_names, experiment_folder_name)
   elif model_class == 'forest':
     for tree_idx in range(len(model_trained.estimators_)):
       if SIMPLIFY_TREES:
-        print(f'[INFO] Simplifying decision tree (#{tree_idx + 1}/{len(model_trained.estimators_)})...', end = '', file=log_file)
+        #print(f'[INFO] Simplifying decision tree (#{tree_idx + 1}/{len(model_trained.estimators_)})...', end = '', file=log_file)
         model_trained.estimators_[tree_idx].tree_ = treeUtils.simplifyDecisionTree(model_trained.estimators_[tree_idx], False)
-        print('\tdone.', file=log_file)
+        #print('\tdone.', file=log_file)
       # treeUtils.saveTreeVisualization(model_trained.estimators_[tree_idx], model_class, f'tree{tree_idx}', X_test, feature_names, experiment_folder_name)
 
-  if experiment_folder_name:
-    pickle.dump(model_trained, open(f'{experiment_folder_name}/_model_trained', 'wb'))
-
-  #heh = model_trained._get_type()
+  #if experiment_folder_name:
+    #pickle.dump(model_trained, open(f'{experiment_folder_name}/_model_trained', 'wb'))
 
   return model_trained
 

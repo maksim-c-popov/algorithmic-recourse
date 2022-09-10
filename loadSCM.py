@@ -423,10 +423,10 @@ def loadSCM(scm_class, experiment_folder_name = None):
 
   scm = CausalModel(scm_class, structural_equations_np, structural_equations_ts, noises_distributions)
   # TODO uncomment and repro on other machines
-  if experiment_folder_name is not None:
-    try:
-      scm.visualizeGraph(experiment_folder_name)
-    except Exception as e:
-      print(e)
+  #if experiment_folder_name is not None:
+  #  try:
+  #    scm.visualizeGraph(experiment_folder_name)
+  #  except Exception as e:
+  #    print(e)
   return scm
 

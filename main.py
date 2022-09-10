@@ -10,6 +10,9 @@ import loadSCM
 import loadData
 import loadModel
 
+import pickle
+from pprint import pprint
+
 from scatter import *
 
 import new.experiments as experiments
@@ -19,7 +22,7 @@ import new.global_vars as global_vars
 from new.classes.memoize import Memoize
 
 from random import seed
-RANDOM_SEED = 55555
+RANDOM_SEED = 42
 seed(RANDOM_SEED) # set the random seed so that the random permutations can be reproduced again
 np.random.seed(RANDOM_SEED)
 
@@ -108,12 +111,16 @@ if __name__ == "__main__":
   parser.add_argument('--max_shap_intervention_cardinality', type=int, default=3)
   parser.add_argument('--optimization_approach', type=str, default='grad_descent')
   parser.add_argument('--grid_search_bins', type=int, default=10)
+  #parser.add_argument('--grad_descent_epochs', type=int, default=100)
   parser.add_argument('--grad_descent_epochs', type=int, default=1000)
   parser.add_argument('--epsilon_boundary', type=int, default=0.10, help='we only consider instances that are negatively predicted and at least epsilon_boundary prob away from decision boundary (too restrictive = smaller `batch_number` possible w/ fixed `num_train_samples`).')
   parser.add_argument('--batch_number', type=int, default=0)
-  parser.add_argument('--sample_count', type=int, default=5, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
+  parser.add_argument('--sample_count', type=int, default=10, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
+  #parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
 
   args = parser.parse_args()
+
+  start_time = time.time()
 
   if not (args.dataset_class in {'synthetic', 'adult'}):
     raise Exception(f'{args.dataset_class} not supported.')
@@ -251,10 +258,20 @@ if __name__ == "__main__":
 
   if args.experiment == 5:
     experiments.runSubPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
+  
   elif args.experiment == 6:
     experiments.runBoxPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
-    experiments.runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
+    
+    results = experiments.runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
+    end_time = time.time()
+    results['total_runtime'] = np.around(end_time - start_time, 3)
+    print(f'[INFO] Saving (overwriting) results...\t', end='')
+    pickle.dump(results, open(f'{experiment_folder_name}/_per_instance_results', 'wb'))
+    pprint(results, open(f'{experiment_folder_name}/_per_instance_results.txt', 'w'))
+    print(f'done.')
+  
   elif args.experiment == 8:
     experiments.runBoxPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
+  
   elif args.experiment == 9: # fair recourse
     experiments.runFairRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)

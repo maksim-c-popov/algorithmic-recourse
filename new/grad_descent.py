@@ -169,20 +169,21 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
   print_log_every = lambda_opt_update_every
   optimizer = torch.optim.Adam(params = list(action_set_ts.values()), lr = action_set_learning_rate)
 
-  all_logs = {}
-  all_logs['epochs'] = []
-  all_logs['loss_total'] = []
-  all_logs['loss_cost'] = []
-  all_logs['lambda_opt'] = []
-  all_logs['loss_constraint'] = []
-  all_logs['action_set'] = []
+  #all_logs = {}
+  #all_logs['epochs'] = []
+  #all_logs['loss_total'] = []
+  #all_logs['loss_cost'] = []
+  #all_logs['lambda_opt'] = []
+  #all_logs['loss_constraint'] = []
+  #all_logs['action_set'] = []
 
   start_time = time.time()
   if args.debug_flag:
     print(f'\t\t[INFO] initial action set: {str({k : np.around(v.item(), 4) for k,v in action_set_ts.items()})}') # TODO (lowpri): use pretty print
 
   # https://stackoverflow.com/a/52017595/2759976
-  iterator = tqdm(range(1, num_epochs + 1))
+  #iterator = tqdm(range(1, num_epochs + 1))
+  iterator = range(1, num_epochs + 1)
   for epoch in iterator:
 
     # ========================================================================
@@ -242,9 +243,9 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
 
     # stop if past K valid thetas did not improve upon best previous cost
     if no_decrease_in_min_valid_cost > early_stopping_K:
-      saveLossCurve(save_path, intervention_set, best_action_set_epoch, all_logs)
+      #saveLossCurve(save_path, intervention_set, best_action_set_epoch, all_logs)
       # https://stackoverflow.com/a/52017595/2759976
-      iterator.close()
+      #iterator.close()
       break
 
     # ========================================================================
@@ -273,15 +274,15 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
         f'loss_constraint: {loss_constraint.item():02.6f}    ' \
         f'value_lcb: {value_lcb.item():02.6f}    ' \
       )
-    all_logs['epochs'].append(epoch)
-    all_logs['loss_total'].append(loss_total.item())
-    all_logs['loss_cost'].append(loss_cost.item())
-    all_logs['lambda_opt'].append(lambda_opt)
-    all_logs['loss_constraint'].append(loss_constraint.item())
-    all_logs['action_set'].append({k : v.item() for k,v in action_set_ts.items()})
+    #all_logs['epochs'].append(epoch)
+    #all_logs['loss_total'].append(loss_total.item())
+    #all_logs['loss_cost'].append(loss_cost.item())
+    #all_logs['lambda_opt'].append(lambda_opt)
+    #all_logs['loss_constraint'].append(loss_constraint.item())
+    #all_logs['action_set'].append({k : v.item() for k,v in action_set_ts.items()})
 
-    if epoch % 100 == 0:
-      saveLossCurve(save_path, intervention_set, best_action_set_epoch, all_logs)
+    #if epoch % 100 == 0:
+      #saveLossCurve(save_path, intervention_set, best_action_set_epoch, all_logs)
 
   end_time = time.time()
   if args.debug_flag:

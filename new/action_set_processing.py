@@ -186,7 +186,7 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
   if args.optimization_approach == 'brute_force':
 
     valid_action_sets = getValidDiscretizedActionSets(args, objs)
-    print(f'\n\t[INFO] Computing optimal `{recourse_type}`: grid searching over {len(valid_action_sets)} action sets...')
+    print(f'[INFO] Computing optimal `{recourse_type}`: grid searching over {len(valid_action_sets)} action sets...')
 
     min_cost = np.infty
     min_cost_action_set = {}
@@ -202,7 +202,7 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
   elif args.optimization_approach == 'grad_descent':
 
     valid_intervention_sets = getValidInterventionSets(args, objs)
-    print(f'\n\t[INFO] Computing optimal `{recourse_type}`: grad descent over {len(valid_intervention_sets)} intervention sets (max card: {args.max_intervention_cardinality})...')
+    print(f'[INFO] Computing optimal `{recourse_type}`: grad descent over {len(valid_intervention_sets)} intervention sets (max card: {args.max_intervention_cardinality})...')
 
     min_cost = np.infty
     min_cost_action_set = {}
@@ -210,10 +210,10 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     result_action_sets = []
     result_costs = []
 
-    for idx, intervention_set in enumerate(valid_intervention_sets):
-      # print(f'\n\t[INFO] intervention set #{idx+1}/{len(valid_intervention_sets)}: {str(intervention_set)}')
-      # plotOptimizationLandscape(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
+    for intervention_set in valid_intervention_sets:
+
       action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
+      
       if constraint_handle(args, objs, factual_instance_obj, action_set, recourse_type):
         assert recourse_satisfied # a bit redundant, but just in case, we check
                                   # that the MC samples from constraint_handle()
@@ -234,15 +234,15 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
           min_cost_action_set = action_set
 
 
-    print('====================')
+    #print('====================')
     print(f'Done (optimal intervention set: {str(min_cost_action_set)}).')
-    print(f'Results for all intervention sets:')
+    #print(f'Results for all intervention sets:')
 
     result_sets_with_cost = list(zip(result_action_sets, result_costs))
     result_sets_with_cost.sort(key=lambda x: x[1])
 
-    [print("Cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[0])) for res in result_sets_with_cost]
-    print('====================')
+    #[print("Cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[0])) for res in result_sets_with_cost]
+    #print('====================')
     
     X_all = utils.getOriginalDataFrame(objs, args.num_train_samples)
 
@@ -273,11 +273,11 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     for i in range(1, shap_set_lenght + 1):
       shap_intervention_sets.append(set(relevant_shap_feature_names[:i]))
     
-    print('relevant shap values:')
-    print(relevant_shap_values)
-    print('shap intervention_sets:')
-    print(shap_intervention_sets)
-    print('====================')
+    #print('relevant shap values:')
+    #print(relevant_shap_values)
+    #print('shap intervention_sets:')
+    #print(shap_intervention_sets)
+    #print('====================')
 
     result_shap_action_sets = []
     result_shap_costs = []
@@ -295,16 +295,16 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
         result_shap_action_sets.append(action_set)
         result_shap_costs.append(cost_of_action_set)
     
-    print('====================')
-    print(f'Results for all SHAP intervention sets:')
+    #print('====================')
+    #print(f'Results for all SHAP intervention sets:')
 
-    result_sets_with_cost = list(zip(result_shap_action_sets, result_shap_costs))
-    result_sets_with_cost.sort(key=lambda x: x[1])
+    result_shap_sets_with_cost = list(zip(result_shap_action_sets, result_shap_costs))
+    result_shap_sets_with_cost.sort(key=lambda x: x[1])
 
-    [print("Cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[0])) for res in result_sets_with_cost]
-    print('====================')
+    #[print("Cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[0])) for res in result_shap_sets_with_cost]
+    #print('====================')
 
   else:
     raise Exception(f'{args.optimization_approach} not recognized.')
 
-  return min_cost_action_set
+  return (min_cost_action_set, result_sets_with_cost, relevant_shap_values, result_shap_sets_with_cost)
