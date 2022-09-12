@@ -1,11 +1,13 @@
 import itertools
 import torch
+import random
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 import shap
 import json
+from statistics import mean
 
 import new.global_vars as global_vars
 import new.utils as utils
@@ -208,43 +210,67 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     min_cost_action_set = {}
     
     result_action_sets = []
-    result_costs = []
+    result_best_costs = []
+    result_mean_costs = []
 
-    for intervention_set in valid_intervention_sets:
+    for interv_set in valid_intervention_sets:      
 
-      action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
+      intervention_set = list(interv_set)
+
+      cost_of_attempts = []
+      for _ in range(args.attempts_per_sample):
+        
+        random.shuffle(intervention_set)
+        print('intervention set: ' + str(intervention_set))
+        
+        action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
+
+        if constraint_handle(args, objs, factual_instance_obj, action_set, recourse_type):
+          assert recourse_satisfied # a bit redundant, but just in case, we check
+                                    # that the MC samples from constraint_handle()
+                                    # on the line above and the MC samples from
+                                    # performGradDescentOptimization() both agree
+                                    # that recourse has been satisfied
+          assert np.isclose( # won't be exact becuase the former is float32 tensor
+            cost_of_action_set,
+            measureActionSetCost(args, objs, factual_instance_obj, action_set),
+            atol = 1e-2,
+          )
+
+        if recourse_satisfied:
+          cost_of_attempts.append(cost_of_action_set)
+
       
-      if constraint_handle(args, objs, factual_instance_obj, action_set, recourse_type):
-        assert recourse_satisfied # a bit redundant, but just in case, we check
-                                  # that the MC samples from constraint_handle()
-                                  # on the line above and the MC samples from
-                                  # performGradDescentOptimization() both agree
-                                  # that recourse has been satisfied
-        assert np.isclose( # won't be exact becuase the former is float32 tensor
-          cost_of_action_set,
-          measureActionSetCost(args, objs, factual_instance_obj, action_set),
-          atol = 1e-2,
-        )
+      print(str(args.attempts_per_sample) + ' attemps for the factual instance finished')
+      print(cost_of_attempts)
+      print('====================')
+
+      if len(cost_of_attempts) > 0:
 
         result_action_sets.append(action_set)
-        result_costs.append(cost_of_action_set)
 
-        if cost_of_action_set < min_cost:
-          min_cost = cost_of_action_set
+        best_attempt_cost = min(cost_of_attempts)
+
+        result_best_costs.append(best_attempt_cost)
+        result_mean_costs.append(mean(cost_of_attempts))
+
+        if best_attempt_cost < min_cost:
+          min_cost = best_attempt_cost
           min_cost_action_set = action_set
 
 
-    #print('====================')
+    print('====================')
     print(f'Done (optimal intervention set: {str(min_cost_action_set)}).')
-    #print(f'Results for all intervention sets:')
+    print(f'Results for all intervention sets:')
 
-    result_sets_with_cost = list(zip(result_action_sets, result_costs))
-    result_sets_with_cost.sort(key=lambda x: x[1])
+    result_sets_with_cost = list(zip(result_best_costs, result_mean_costs, result_action_sets))
+    result_sets_with_cost.sort(key=lambda x: x[0])
 
-    #[print("Cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[0])) for res in result_sets_with_cost]
-    #print('====================')
+    #[print("Min cost: " + str(round(res[0], 6)) + "; Mean cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(list(res[2].keys()))) for res in result_sets_with_cost]
+    [print("Min cost: " + str(round(res[0], 6)) + "; Mean cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[2])) for res in result_sets_with_cost]
+    print('====================')
     
-    X_all = utils.getOriginalDataFrame(objs, args.num_train_samples)
+    X_all = utils.getOriginalDataFrame(objs, args.num_train_samples + args.num_validation_samples)
 
     explainer = shap.Explainer(objs.classifier_obj.predict, X_all)
 
@@ -268,38 +294,33 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
 
     relevant_shap_feature_names = [x[0] for x in relevant_shap_values]
 
-    shap_intervention_sets = []
+    shap_action_sets = []
     shap_set_lenght = min(len(relevant_shap_values), args.max_shap_intervention_cardinality)
     for i in range(1, shap_set_lenght + 1):
-      shap_intervention_sets.append(set(relevant_shap_feature_names[:i]))
+      shap_action_sets.append(set(relevant_shap_feature_names[:i]))
     
-    #print('relevant shap values:')
-    #print(relevant_shap_values)
-    #print('shap intervention_sets:')
-    #print(shap_intervention_sets)
-    #print('====================')
+    print('relevant shap values:')
+    print(relevant_shap_values)
+    print('shap intervention_sets:')
+    print(shap_action_sets)
+    print('====================')
+
+    ordered_action_costs = [x[0] for x in result_sets_with_cost]
+    ordered_action_sets = [set(x[2].keys()) for x in result_sets_with_cost]
+    
+    shap_results = [ordered_action_sets.index(shap_act_set) for shap_act_set in shap_action_sets if shap_act_set in ordered_action_sets]
+    if len(shap_results) > 0:
+      print(min(shap_results))
+      print((ordered_action_costs[min(shap_results)] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0]))
 
     result_shap_action_sets = []
     result_shap_costs = []
-
-    for _, intervention_set in enumerate(shap_intervention_sets):
-      action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
-      if constraint_handle(args, objs, factual_instance_obj, action_set, recourse_type):
-        assert recourse_satisfied # a bit redundant, but just in case, we check
-        assert np.isclose( # won't be exact becuase the former is float32 tensor
-          cost_of_action_set,
-          measureActionSetCost(args, objs, factual_instance_obj, action_set),
-          atol = 1e-2,
-        )
-
-        result_shap_action_sets.append(action_set)
-        result_shap_costs.append(cost_of_action_set)
     
     #print('====================')
     #print(f'Results for all SHAP intervention sets:')
 
     result_shap_sets_with_cost = list(zip(result_shap_action_sets, result_shap_costs))
-    result_shap_sets_with_cost.sort(key=lambda x: x[1])
+    #result_shap_sets_with_cost.sort(key=lambda x: x[1])
 
     #[print("Cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[0])) for res in result_shap_sets_with_cost]
     #print('====================')

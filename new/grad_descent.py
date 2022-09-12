@@ -182,8 +182,8 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
     print(f'\t\t[INFO] initial action set: {str({k : np.around(v.item(), 4) for k,v in action_set_ts.items()})}') # TODO (lowpri): use pretty print
 
   # https://stackoverflow.com/a/52017595/2759976
-  #iterator = tqdm(range(1, num_epochs + 1))
-  iterator = range(1, num_epochs + 1)
+  iterator = tqdm(range(1, num_epochs + 1))
+  #iterator = range(1, num_epochs + 1)
   for epoch in iterator:
 
     # ========================================================================
@@ -245,7 +245,7 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
     if no_decrease_in_min_valid_cost > early_stopping_K:
       #saveLossCurve(save_path, intervention_set, best_action_set_epoch, all_logs)
       # https://stackoverflow.com/a/52017595/2759976
-      #iterator.close()
+      iterator.close()
       break
 
     # ========================================================================

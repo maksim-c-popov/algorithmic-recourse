@@ -261,11 +261,10 @@ def runRecourseExperiment(args, objs, experiment_folder_name, experimental_setup
   per_instance_results = {}
 
   with Pool(initializer=init_process, initargs=(args, objs, recourse_types,)) as pool:
-        # issue tasks into the process pool
-        result = pool.map(recourseProcess, enumerate(factual_instances_dict.items()))
-        # read results from the queue as they become available
-        for i in range(len(result)):
-            per_instance_results[i] = result[i]
+    # issue tasks into the process pool
+    result = pool.map(recourseProcess, enumerate(factual_instances_dict.items()))
+    for i in range(len(result)):
+      per_instance_results[i] = result[i]
 
   return per_instance_results
 
