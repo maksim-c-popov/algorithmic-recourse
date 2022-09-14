@@ -9,6 +9,8 @@ import itertools
 import random
 import seaborn as sns
 
+from statistics import mean
+
 from functools import partial
 from sklearn.metrics.pairwise import linear_kernel, rbf_kernel, polynomial_kernel
 from pprint import pprint
@@ -209,51 +211,53 @@ def recourseProcess(factual_instance):
     tmp = {}
     save_path = f''#{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}/{recourse_type}'
 
-    start_time = time.time()
-    opt_set, full_set, shap_vals, shap_set =  action_set_processing.computeOptimalActionSet(
+    #start_time = time.time()
+    best_shap_index, shap_result_diff_best, gain_in_time, shap_found = action_set_processing.computeOptimalActionSet(
       args_g,
       objs_g,
       factual_instance_obj,
       save_path,
       recourse_type,
     )
-    tmp['optimal_action_set'] = opt_set
-    tmp['full_set'] = full_set
-    tmp['shap_vals'] = shap_vals
-    tmp['shap_set'] = shap_set
-    end_time = time.time()
 
-    tmp['default_to_MO'] = False
+    print(f'[INFO] Finished processing instance `{factual_instance_obj.instance_idx}` (#{enumeration_idx + 1})...')
+    #tmp['optimal_action_set'] = opt_set
+    #tmp['full_set'] = full_set
+    #tmp['shap_vals'] = shap_vals
+    #tmp['shap_set'] = shap_set
+    #end_time = time.time()
+
+    #tmp['default_to_MO'] = False
 
 
-    tmp['runtime'] = np.around(end_time - start_time, 3)
+    #tmp['runtime'] = np.around(end_time - start_time, 3)
 
-    tmp['scf_validity']  = utils.isPointConstraintSatisfied(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm0_true')
-    try:
+    #tmp['scf_validity']  = utils.isPointConstraintSatisfied(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm0_true')
+    #try:
       # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
-      tmp['ic_m2_true'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm2_true'), 3)
-    except:
-      tmp['ic_m2_true'] = np.NaN
+    #  tmp['ic_m2_true'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm2_true'), 3)
+    #except:
+    #  tmp['ic_m2_true'] = np.NaN
 
-    try:
+    #try:
       # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
-      if recourse_type in global_vars.ACCEPTABLE_DISTR_RECOURSE and recourse_type != 'm2_true':
-        tmp['ic_rec_type'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], recourse_type), 3)
-      else:
-        tmp['ic_rec_type'] = np.NaN
-    except:
-      tmp['ic_rec_type'] = np.NaN
+    #  if recourse_type in global_vars.ACCEPTABLE_DISTR_RECOURSE and recourse_type != 'm2_true':
+    #    tmp['ic_rec_type'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], recourse_type), 3)
+    #  else:
+    #    tmp['ic_rec_type'] = np.NaN
+   # except:
+   #  tmp['ic_rec_type'] = np.NaN
 
-    if args_g.classifier_class in global_vars.FAIR_MODELS:
+    #if args_g.classifier_class in global_vars.FAIR_MODELS:
       # to somewhat allow for comparison of cost_valid and dist_to_db in fair experiments, do not normalize the former
-      tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], range_normalized=False)
-    else:
-      tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'])
+   #   tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], range_normalized=False)
+   # else:
+    #  tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'])
 
-    tmp['cost_valid'] = tmp['cost_all'] if tmp['scf_validity'] else np.NaN
-    tmp['dist_to_db'] = measureDistanceToDecisionBoundary(args_g, objs_g, factual_instance_obj)
+    #tmp['cost_valid'] = tmp['cost_all'] if tmp['scf_validity'] else np.NaN
+    #tmp['dist_to_db'] = measureDistanceToDecisionBoundary(args_g, objs_g, factual_instance_obj)
 
-    return tmp
+    return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found)
 
 def runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types, file_suffix=''):
   ''' optimal action set: figure + table '''
@@ -262,10 +266,20 @@ def runRecourseExperiment(args, objs, experiment_folder_name, experimental_setup
 
   with Pool(initializer=init_process, initargs=(args, objs, recourse_types,)) as pool:
     # issue tasks into the process pool
-    result = pool.map(recourseProcess, enumerate(factual_instances_dict.items()))
-    for i in range(len(result)):
-      per_instance_results[i] = result[i]
+    result_shap_places, result_differences, gains_in_time, shap_found = zip(*pool.map(recourseProcess, enumerate(factual_instances_dict.items())))
 
+    #for i in range(len(result)):
+      #per_instance_results[i] = result[i]
+    #per_instance_results['mean_place_of_shap_set'] = mean([x[0] for x in result])
+    #per_instance_results['mean_difference_with_best'] = mean([x[1] for x in result])
+    per_instance_results['result_shap_places'] = result_shap_places
+    per_instance_results['result_differences'] = result_differences
+    per_instance_results['gains_in_time'] = gains_in_time
+    per_instance_results['shap_found'] = shap_found
+    per_instance_results['mean_place_of_shap_set'] = np.nanmean(np.array(result_shap_places))
+    per_instance_results['mean_difference_with_best'] = np.nanmean(np.array(result_differences))
+    per_instance_results['mean_gains_in_time'] = np.nanmean(np.array(gains_in_time))
+  
   return per_instance_results
 
 

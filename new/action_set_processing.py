@@ -1,6 +1,7 @@
 import itertools
 import torch
 import random
+import time
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -204,24 +205,25 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
   elif args.optimization_approach == 'grad_descent':
 
     valid_intervention_sets = getValidInterventionSets(args, objs)
-    print(f'[INFO] Computing optimal `{recourse_type}`: grad descent over {len(valid_intervention_sets)} intervention sets (max card: {args.max_intervention_cardinality})...')
+    #print(f'[INFO] Computing optimal `{recourse_type}`: grad descent over {len(valid_intervention_sets)} intervention sets (max card: {args.max_intervention_cardinality})...')
 
     min_cost = np.infty
     min_cost_action_set = {}
     
     result_action_sets = []
     result_best_costs = []
-    result_mean_costs = []
+    result_time_calc = []
 
     for interv_set in valid_intervention_sets:      
 
       intervention_set = list(interv_set)
 
+      start_time = time.time()
       cost_of_attempts = []
       for _ in range(args.attempts_per_sample):
         
         random.shuffle(intervention_set)
-        print('intervention set: ' + str(intervention_set))
+        #print('intervention set: ' + str(intervention_set))
         
         action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
 
@@ -241,34 +243,36 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
           cost_of_attempts.append(cost_of_action_set)
 
       
-      print(str(args.attempts_per_sample) + ' attemps for the factual instance finished')
-      print(cost_of_attempts)
-      print('====================')
+      #print(str(args.attempts_per_sample) + ' attemps for the factual instance finished')
+      #print(cost_of_attempts)
+      #print('====================')
 
       if len(cost_of_attempts) > 0:
+
+        end_time = time.time()
 
         result_action_sets.append(action_set)
 
         best_attempt_cost = min(cost_of_attempts)
 
         result_best_costs.append(best_attempt_cost)
-        result_mean_costs.append(mean(cost_of_attempts))
+        result_time_calc.append(np.around(end_time - start_time, 3))
 
         if best_attempt_cost < min_cost:
           min_cost = best_attempt_cost
           min_cost_action_set = action_set
 
 
-    print('====================')
-    print(f'Done (optimal intervention set: {str(min_cost_action_set)}).')
-    print(f'Results for all intervention sets:')
+    #print('====================')
+    #print(f'Done (optimal intervention set: {str(min_cost_action_set)}).')
+    #print(f'Results for all intervention sets:')
 
-    result_sets_with_cost = list(zip(result_best_costs, result_mean_costs, result_action_sets))
+    result_sets_with_cost = list(zip(result_best_costs, result_time_calc, result_action_sets))
     result_sets_with_cost.sort(key=lambda x: x[0])
 
     #[print("Min cost: " + str(round(res[0], 6)) + "; Mean cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(list(res[2].keys()))) for res in result_sets_with_cost]
-    [print("Min cost: " + str(round(res[0], 6)) + "; Mean cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[2])) for res in result_sets_with_cost]
-    print('====================')
+    #[print("Min cost: " + str(round(res[0], 6)) + "; Mean cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[2])) for res in result_sets_with_cost]
+    #print('====================')
     
     X_all = utils.getOriginalDataFrame(objs, args.num_train_samples + args.num_validation_samples)
 
@@ -299,33 +303,32 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     for i in range(1, shap_set_lenght + 1):
       shap_action_sets.append(set(relevant_shap_feature_names[:i]))
     
-    print('relevant shap values:')
-    print(relevant_shap_values)
-    print('shap intervention_sets:')
-    print(shap_action_sets)
-    print('====================')
-
-    ordered_action_costs = [x[0] for x in result_sets_with_cost]
-    ordered_action_sets = [set(x[2].keys()) for x in result_sets_with_cost]
-    
-    shap_results = [ordered_action_sets.index(shap_act_set) for shap_act_set in shap_action_sets if shap_act_set in ordered_action_sets]
-    if len(shap_results) > 0:
-      print(min(shap_results))
-      print((ordered_action_costs[min(shap_results)] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0]))
-
-    result_shap_action_sets = []
-    result_shap_costs = []
-    
+    #print('relevant shap values:')
+    #print(relevant_shap_values)
+    #print('shap intervention_sets:')
+    #print(shap_action_sets)
     #print('====================')
-    #print(f'Results for all SHAP intervention sets:')
 
-    result_shap_sets_with_cost = list(zip(result_shap_action_sets, result_shap_costs))
-    #result_shap_sets_with_cost.sort(key=lambda x: x[1])
+    best_shap_index = np.nan
+    shap_result_diff_best = np.nan
+    gain_in_time = np.nan
+    shap_found = True
 
-    #[print("Cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[0])) for res in result_shap_sets_with_cost]
-    #print('====================')
+    if len(result_sets_with_cost) > 0:
+      ordered_action_costs, ordered_time_calc, ordered_action_sets = zip(*[(x[0], x[1], set(x[2].keys())) for x in result_sets_with_cost])
+      
+      shap_results = [ordered_action_sets.index(shap_act_set) for shap_act_set in shap_action_sets if shap_act_set in ordered_action_sets]
+
+      if len(shap_results) > 0:
+        best_shap_index = min(shap_results)
+        shap_result_diff_best = (ordered_action_costs[best_shap_index] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0])
+        gain_in_time = sum(ordered_time_calc) / sum([ordered_time_calc[x] for x in shap_results])
+        #print(best_shap_index)
+        #print(shap_result_diff_best)\
+      else:
+        shap_found = False
 
   else:
     raise Exception(f'{args.optimization_approach} not recognized.')
 
-  return (min_cost_action_set, result_sets_with_cost, relevant_shap_values, result_shap_sets_with_cost)
+  return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found)

@@ -185,7 +185,7 @@ def loadModelForDataset(model_class, dataset_class, scm_class = None, num_train_
     pass
 
   classifier_obj = model_trained
-  visualizeDatasetAndFixedModel(dataset_obj, classifier_obj, experiment_folder_name)
+  #visualizeDatasetAndFixedModel(dataset_obj, classifier_obj, experiment_folder_name)
 
   feature_names = dataset_obj.getInputAttributeNames('kurz') # easier to read (nothing to do with one-hot vs non-hit!)
   if model_class == 'tree':
