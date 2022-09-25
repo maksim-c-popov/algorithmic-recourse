@@ -252,7 +252,7 @@ def getColumnIndicesFromNames(args, objs, column_names):
   return column_indices
 
 
-def _sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, action_set_ts, recourse_type):
+def _sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, action_set_ts, recourse_type, last_node):
 
   counterfactual_template_ts = _getCounterfactualTemplate(args, objs, factual_instance_ts, action_set_ts, recourse_type)
 
@@ -269,6 +269,8 @@ def _sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts
     # +0 important, specifically for tensor based elements, so we don't copy
     # an existing object in the computational graph, but we create a new node
     samples_ts[:, getColumnIndicesFromNames(args, objs, [node])] = counterfactual_template_ts[node] + 0
+    
+    if node == last_node: break
 
   # Simply traverse the graph in order, and populate nodes as we go!
   # IMPORTANT: DO NOT use SET(topo ordering); it sometimes changes ordering!
@@ -368,5 +370,7 @@ def _sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts
           sample_from=sample_from,
         )
         samples_ts[:, getColumnIndicesFromNames(args, objs, [node])] = new_samples + 0 # TODO (lowpri): not sure if +0 is needed or not
+    
+    if node == last_node: break
 
   return samples_ts

@@ -1,6 +1,7 @@
 import torch
 import time
 import numpy as np
+import itertools
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from sklearn.linear_model import LogisticRegression
@@ -120,7 +121,7 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
 
   # IMPORTANT: action_set_ts includes trainable params, but factual_instance_ts does not.
   factual_instance_ts = {k: torch.tensor(v, dtype=torch.float32) for k, v in factual_instance_obj.items()}
-
+  factual_instance_upd_ts = {k: torch.tensor(v, dtype=torch.float32) for k, v in factual_instance_obj.items()}
 
   def initializeNonSaturatedActionSet(args, objs, factual_instance_obj, intervention_set, recourse_type):
     # default action_set
@@ -131,7 +132,13 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
         for node in intervention_set
       ]
     ))
-    noise_multiplier = 0
+    #######################################################################################################################################################
+    #######################################################################################################################################################
+    #######################################################################################################################################################
+    #######################################################################################################################################################
+    noise_multiplier = 0  ################################################################################################################################
+    #noise_multiplier = 1.5 ################################################################################################################################
+
     while noise_multiplier < 10:
       # create an action set from the factual instance, and possibly some noise
       action_set = {k : v + noise_multiplier * np.random.randn() for k,v in action_set.items()}
@@ -150,6 +157,9 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
 
   action_set = initializeNonSaturatedActionSet(args, objs, factual_instance_obj, intervention_set, recourse_type)
   action_set_ts = {k : torch.tensor(v, requires_grad = True, dtype=torch.float32) for k,v in action_set.items()}
+
+  all_combinations = [itertools.islice(action_set.items(), L) for L in range(1, len(action_set.items()))]
+  action_set_ts_comb = [{k : torch.tensor(v, dtype=torch.float32) for k,v in item} for item in all_combinations]
 
   # TODO (lowpri): make input args
   min_valid_cost = 1e6  # some large number
@@ -189,14 +199,31 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
     # ========================================================================
     # CONSTRUCT COMPUTATION GRAPH
     # ========================================================================
+    
+    if len(action_set_ts_comb) > 0:
+      for i, tmp_action_set_ts in enumerate(action_set_ts_comb):
+        next_node = list(action_set_ts.keys())[i + 1]
+        tmp_samples_ts = sampling._sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, tmp_action_set_ts, recourse_type, next_node)
 
-    samples_ts = sampling._sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, action_set_ts, recourse_type)
+        ts_next_node_mean = torch.mean(tmp_samples_ts, 0)
+        ts_next_node_new_val = ts_next_node_mean[sampling.getColumnIndicesFromNames(args, objs, [next_node])[0]]
+
+        factual_instance_upd_ts[next_node] = ts_next_node_new_val
+
+    last_node = list(objs.scm_obj.getTopologicalOrdering())[-1]
+    samples_ts = sampling._sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, action_set_ts, recourse_type, last_node)
+
+    #torch.set_printoptions(precision=5)
+    #print(factual_instance_ts)
+    #for i, comb in enumerate(samples_ts_comb):
+    #  print(i, comb.tolist())
+
 
     # ========================================================================
     # COMPUTE LOSS
     # ========================================================================
 
-    loss_cost = action_set_processing.measureActionSetCost(args, objs, factual_instance_ts, action_set_ts, tmp_processing_type)
+    loss_cost = action_set_processing.measureActionSetCost(args, objs, factual_instance_upd_ts, action_set_ts, tmp_processing_type)
 
     # get classifier
     h = getTorchClassifier(args, objs)

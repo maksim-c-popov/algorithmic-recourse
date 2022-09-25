@@ -205,6 +205,17 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
   elif args.optimization_approach == 'grad_descent':
 
     valid_intervention_sets = getValidInterventionSets(args, objs)
+
+
+
+
+
+    valid_intervention_sets.reverse()
+
+
+
+
+
     #print(f'[INFO] Computing optimal `{recourse_type}`: grad descent over {len(valid_intervention_sets)} intervention sets (max card: {args.max_intervention_cardinality})...')
 
     min_cost = np.infty
@@ -214,16 +225,16 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     result_best_costs = []
     result_time_calc = []
 
-    for interv_set in valid_intervention_sets:      
+    for intervention_set in valid_intervention_sets:      
 
-      intervention_set = list(interv_set)
+      interv_set_orders = itertools.cycle(itertools.permutations(intervention_set, len(intervention_set)))
 
       start_time = time.time()
       cost_of_attempts = []
       for _ in range(args.attempts_per_sample):
         
-        random.shuffle(intervention_set)
-        #print('intervention set: ' + str(intervention_set))
+        intervention_set = next(interv_set_orders)
+        print('intervention set: ' + str(intervention_set))
         
         action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
 
@@ -244,7 +255,7 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
 
       
       #print(str(args.attempts_per_sample) + ' attemps for the factual instance finished')
-      #print(cost_of_attempts)
+      print(cost_of_attempts)
       #print('====================')
 
       if len(cost_of_attempts) > 0:
