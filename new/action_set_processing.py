@@ -210,7 +210,7 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
 
 
 
-    valid_intervention_sets.reverse()
+    #valid_intervention_sets.reverse()
 
 
 
