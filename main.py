@@ -123,14 +123,14 @@ if __name__ == "__main__":
   parser.add_argument('--max_intervention_cardinality', type=int, default=100)
 
   parser.add_argument('--max_shap_intervention_cardinality', type=int, default=100)
-  parser.add_argument('--attempts_per_sample', type=int, default=5)
+  parser.add_argument('--attempts_per_sample', type=int, default=2)
   
   parser.add_argument('--optimization_approach', type=str, default='grad_descent')
   parser.add_argument('--grid_search_bins', type=int, default=10)
   parser.add_argument('--grad_descent_epochs', type=int, default=1000)
   parser.add_argument('--epsilon_boundary', type=int, default=0.10, help='we only consider instances that are negatively predicted and at least epsilon_boundary prob away from decision boundary (too restrictive = smaller `batch_number` possible w/ fixed `num_train_samples`).')
   parser.add_argument('--batch_number', type=int, default=0)
-  parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
+  parser.add_argument('--sample_count', type=int, default=10, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
   #parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
 
   args = parser.parse_args()
