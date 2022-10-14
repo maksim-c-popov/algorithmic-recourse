@@ -212,7 +212,8 @@ def recourseProcess(factual_instance):
     save_path = f''#{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}/{recourse_type}'
 
     #start_time = time.time()
-    best_shap_index, shap_result_diff_best, gain_in_time, shap_found = action_set_processing.computeOptimalActionSet(
+    #best_shap_index, shap_result_diff_best, gain_in_time, shap_found, total_num_of_res = action_set_processing.computeOptimalActionSet(
+    result = action_set_processing.computeOptimalActionSet(
       args_g,
       objs_g,
       factual_instance_obj,
@@ -257,7 +258,7 @@ def recourseProcess(factual_instance):
     #tmp['cost_valid'] = tmp['cost_all'] if tmp['scf_validity'] else np.NaN
     #tmp['dist_to_db'] = measureDistanceToDecisionBoundary(args_g, objs_g, factual_instance_obj)
 
-    return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found)
+    return result
 
 def runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types, file_suffix=''):
   ''' optimal action set: figure + table '''
@@ -266,13 +267,14 @@ def runRecourseExperiment(args, objs, experiment_folder_name, experimental_setup
 
   with Pool(initializer=init_process, initargs=(args, objs, recourse_types,)) as pool:
     # issue tasks into the process pool
-    result_shap_places, result_differences, gains_in_time, shap_found = zip(*pool.map(recourseProcess, enumerate(factual_instances_dict.items())))
+    result_shap_places, result_differences, gains_in_time, shap_found, total_num_of_places = zip(*pool.map(recourseProcess, enumerate(factual_instances_dict.items())))
 
     #for i in range(len(result)):
       #per_instance_results[i] = result[i]
     #per_instance_results['mean_place_of_shap_set'] = mean([x[0] for x in result])
     #per_instance_results['mean_difference_with_best'] = mean([x[1] for x in result])
     per_instance_results['result_shap_places'] = result_shap_places
+    per_instance_results['total_num_of_places'] = total_num_of_places
     per_instance_results['result_differences'] = result_differences
     per_instance_results['gains_in_time'] = gains_in_time
     per_instance_results['shap_found'] = shap_found

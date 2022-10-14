@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-import shap
 import json
 from statistics import mean
 
@@ -15,6 +14,8 @@ import new.utils as utils
 import new.grad_descent as grad_descent
 from new.classes.instance import Instance
 
+import shap
+from explainer import Explainer
 
 def getValidDiscretizedActionSets(args, objs):
 
@@ -234,7 +235,7 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
       for _ in range(args.attempts_per_sample):
         
         intervention_set = next(interv_set_orders)
-        print('intervention set: ' + str(intervention_set))
+        #print('intervention set: ' + str(intervention_set))
         
         action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
 
@@ -244,18 +245,31 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
                                     # on the line above and the MC samples from
                                     # performGradDescentOptimization() both agree
                                     # that recourse has been satisfied
-          assert np.isclose( # won't be exact becuase the former is float32 tensor
-            cost_of_action_set,
-            measureActionSetCost(args, objs, factual_instance_obj, action_set),
-            atol = 1e-2,
-          )
+
+
+
+
+
+
+
+
+#          assert np.isclose( # won't be exact becuase the former is float32 tensor
+ ##           cost_of_action_set,
+ #           measureActionSetCost(args, objs, factual_instance_obj, action_set),
+ #           atol = 1e-2,
+  #        )
+
+
+
+
+
 
         if recourse_satisfied:
           cost_of_attempts.append(cost_of_action_set)
 
       
       #print(str(args.attempts_per_sample) + ' attemps for the factual instance finished')
-      print(cost_of_attempts)
+      #print(cost_of_attempts)
       #print('====================')
 
       if len(cost_of_attempts) > 0:
@@ -267,7 +281,7 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
         best_attempt_cost = min(cost_of_attempts)
 
         result_best_costs.append(best_attempt_cost)
-        result_time_calc.append(np.around(end_time - start_time, 3))
+        result_time_calc.append(np.around((end_time - start_time) / args.attempts_per_sample, 3))
 
         if best_attempt_cost < min_cost:
           min_cost = best_attempt_cost
@@ -285,13 +299,56 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     #[print("Min cost: " + str(round(res[0], 6)) + "; Mean cost: " + str(round(res[1], 6)) + "; Action set: " + json.dumps(res[2])) for res in result_sets_with_cost]
     #print('====================')
     
-    X_all = utils.getOriginalDataFrame(objs, args.num_train_samples + args.num_validation_samples)
+    X_train, X_test, Y_train, Y_test = objs.dataset_obj.getTrainTestSplit()
+    X_all = pd.concat([X_train, X_test], axis = 0)
+    #X_all = utils.getOriginalDataFrame(objs, args.num_train_samples + args.num_validation_samples)
+    Y_all = pd.concat([Y_train, Y_test], axis = 0)
 
-    explainer = shap.Explainer(objs.classifier_obj.predict, X_all)
+   # explainer = shap.Explainer(objs.classifier_obj.predict, X_all)
 
     factial_x = pd.DataFrame([factual_instance_obj.dict()])
 
-    shap_values = explainer(factial_x)
+  #  shap_values_old = explainer(factial_x)
+
+
+    #print(list(objs.scm_obj.getTopologicalOrdering()))
+    #print(shap_values)
+
+
+    ######################################################################################
+
+    #print(objs.classifier_obj.predict(X_all.head(20)))
+
+    explainer_symmetric = Explainer(X_all, objs.classifier_obj)
+
+    
+    p = sum(Y_all) / len(Y_all)
+    #p = Y_train.mean()    
+
+    #sanity
+    partial_order = [[0], [1], [2]]
+    confounding = [False, False, False]
+
+    
+    #german-credit
+    if args.scm_class == 'german-credit':
+      partial_order = [[0, 1], [2, 3], [4, 5], [6]]
+      confounding = [False, True, False, False]
+
+    #adult
+    if args.scm_class == 'adult':
+      partial_order = [[0, 1, 2], [3, 4], [5, 6, 7]]
+      confounding = [False, True, True]
+
+    
+
+    shap_values = explainer_symmetric.explain_causal(factial_x, p, ordering=partial_order, confounding=confounding)
+
+    #print(explanation_causal)
+
+    ######################################################################################
+
+
 
     intervenable_nodes = np.setdiff1d(
     objs.dataset_obj.getInputAttributeNames('kurz'),
@@ -311,7 +368,16 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
 
     shap_action_sets = []
     shap_set_lenght = min(len(relevant_shap_values), args.max_shap_intervention_cardinality)
-    for i in range(1, shap_set_lenght + 1):
+    
+    shap_top_lenght = round((shap_set_lenght + 1)/2)
+
+
+    for L in range(1, shap_top_lenght + 1):
+      for subset in itertools.combinations(relevant_shap_feature_names[:shap_top_lenght], L):
+        shap_action_sets.append(set(subset))
+
+
+    for i in range(shap_top_lenght + 1, shap_set_lenght + 1):
       shap_action_sets.append(set(relevant_shap_feature_names[:i]))
     
     #print('relevant shap values:')
@@ -324,6 +390,7 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     shap_result_diff_best = np.nan
     gain_in_time = np.nan
     shap_found = True
+    total_num_of_places = np.nan
 
     if len(result_sets_with_cost) > 0:
       ordered_action_costs, ordered_time_calc, ordered_action_sets = zip(*[(x[0], x[1], set(x[2].keys())) for x in result_sets_with_cost])
@@ -332,8 +399,10 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
 
       if len(shap_results) > 0:
         best_shap_index = min(shap_results)
-        shap_result_diff_best = (ordered_action_costs[best_shap_index] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0])
+        shap_result_diff_best = 0 if (ordered_action_costs[-1] == ordered_action_costs[0]) \
+          else (ordered_action_costs[best_shap_index] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0])
         gain_in_time = sum(ordered_time_calc) / sum([ordered_time_calc[x] for x in shap_results])
+        total_num_of_places = len(result_best_costs)
         #print(best_shap_index)
         #print(shap_result_diff_best)\
       else:
@@ -342,4 +411,4 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
   else:
     raise Exception(f'{args.optimization_approach} not recognized.')
 
-  return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found)
+  return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found, total_num_of_places)

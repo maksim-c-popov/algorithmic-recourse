@@ -5,11 +5,14 @@ import pandas as pd
 import numpy as np
 from feature_combinations import feature_combinations, feature_matrix, weight_matrix
 from prepare_data_causal import prepare_data_causal
-#from shap import Explanation
+from shap import Explanation
 import sys
 import torch
 import math
 import random
+
+
+pd.options.mode.chained_assignment = None
 
 
 class Explainer:
@@ -40,7 +43,7 @@ class Explainer:
                     self.model_type = 'tensorflow'
 
         else:
-            self.model_type = model._get_type()
+            self.model_type = ""
 
 
         # Checks input argument
@@ -224,7 +227,7 @@ class Explainer:
                 dt.loc[dt.id_combination == 0, 'p_hat_'+str(i)] = float(prediction_zero[i])
         else:
             dt['p_hat_'+str(0)] = p_hat[:]
-            dt.loc[dt.id_combination == 0, 'p_hat_'+str(0)] = float(prediction_zero[0])
+            dt.loc[dt.id_combination == 0, 'p_hat_'+str(0)] = float(prediction_zero)
 
 
         p_all = self.predict_model(self.model, self.x_test)

@@ -39,11 +39,10 @@ def prepare_data_causal(explainer, seed=None, n_samples = 1000, index_features =
         #  features = features[]
         #  features <- features[sapply(features, respects_order, ordering = ordering)]
 
-    num_cores = multiprocessing.cpu_count()
+    #num_cores = multiprocessing.cpu_count()
     inputs = range(n_xtest)
     seeds = np.random.randint(2**32-1, size=n_xtest)
-    dt_l = Parallel(n_jobs=num_cores)(delayed(sample_causal_loop)(i, n_samples, explainer,
-                                                                  features, index_features, seeds[i]) for i in inputs)
+    dt_l = [sample_causal_loop(i, n_samples, explainer, features, index_features, seeds[i]) for i in inputs]
     #print(len(sample_causal_list))
     #exit()
     """for i in range(len(dt_l)):
