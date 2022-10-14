@@ -93,8 +93,8 @@ if __name__ == "__main__":
 
   parser = argparse.ArgumentParser()
 
-  #parser.add_argument('-s', '--scm_class', type=str, default='adult', help='Name of SCM to generate data using (see loadSCM.py)')
-  parser.add_argument('-s', '--scm_class', type=str, default='german-credit', help='Name of SCM to generate data using (see loadSCM.py)')
+  parser.add_argument('-s', '--scm_class', type=str, default='adult', help='Name of SCM to generate data using (see loadSCM.py)')
+  #parser.add_argument('-s', '--scm_class', type=str, default='german-credit', help='Name of SCM to generate data using (see loadSCM.py)')
 
   parser.add_argument('-d', '--dataset_class', type=str, default='synthetic', help='Name of dataset to train explanation model for: german, random, mortgage, twomoon')
   parser.add_argument('-c', '--classifier_class', type=str, default='mlp', help='Model class that will learn data: lr, mlp')
@@ -104,7 +104,7 @@ if __name__ == "__main__":
   #parser.add_argument('--experimental_setups', nargs = '+', type=str, default=['m1_cvae'])
   parser.add_argument('--experimental_setups', nargs = '+', type=str, default=['m0_true'])
   parser.add_argument('--norm_type', type=int, default=2)
-  parser.add_argument('--lambda_lcb', type=float, default=2.5)
+  parser.add_argument('--lambda_lcb', type=float, default=2.)
   parser.add_argument('--num_train_samples', type=int, default=250)
   parser.add_argument('--num_validation_samples', type=int, default=250)
   parser.add_argument('--num_display_samples', type=int, default=25)
@@ -113,8 +113,8 @@ if __name__ == "__main__":
   parser.add_argument('--debug_flag', type=bool, default=False)
 
   #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2', 'x3', 'x4', 'x5'])  
-  #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2', 'x3', 'x4']) #adult
-  parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2']) #german-credit
+  parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2', 'x3', 'x4']) #adult
+  #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2']) #german-credit
   #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=[''])
 
   parser.add_argument('--sensitive_attribute_nodes', nargs = '+', type=str, default='')
