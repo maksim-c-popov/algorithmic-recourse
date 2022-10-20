@@ -143,6 +143,37 @@ def loadSCM(scm_class, experiment_folder_name = None):
       'u3': Normal(0, 1),
     }
 
+  elif scm_class == 'sanity-10-lin':
+
+    structural_equations_np = {
+      'x1': lambda n_samples,             :                                   n_samples,
+      'x2': lambda n_samples, x1          :                             -x1 + n_samples,
+      'x3': lambda n_samples, x1, x2      :           0.5*(0.1*x1 + 0.5*x2) + n_samples,
+      'x4': lambda n_samples, x1, x2, x3  :  0.7*(0.5*x1 - 0.2*x2 - 0.2*x3) + n_samples,
+
+      'x5': lambda n_samples,             :                                   n_samples,
+      'x6': lambda n_samples, x3, x5      :            -0.4 + x3 - 0.4 * x5 + n_samples,
+
+      'x7': lambda n_samples,             :                                   n_samples,
+      'x8': lambda n_samples, x7          :                         -0.5*x7 + n_samples,
+      'x9': lambda n_samples, x7, x8      :           0.9*(0.3*x7 + 0.8*x8) + n_samples,
+
+      'x10': lambda n_samples, x4, x6, x9 : 0.5*(-0.2*x4 + 0.9*x6 - 0.1*x9) + n_samples,
+    }
+    structural_equations_ts = structural_equations_np
+    noises_distributions = {
+      'u1': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
+      'u2': Normal(0, 1),
+      'u3': Normal(0, 1),
+      'u4': Normal(0, 1),
+      'u5': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
+      'u6': Normal(0, 1),
+      'u7': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
+      'u8': Normal(0, 1),
+      'u9': Normal(0, 1),
+      'u10':Normal(0, 1),
+    }
+
   elif scm_class == 'sanity-3-anm':
 
     structural_equations_np = {

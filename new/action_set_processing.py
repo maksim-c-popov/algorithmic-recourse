@@ -329,6 +329,10 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     partial_order = [[0], [1], [2]]
     confounding = [False, False, False]
 
+    #sanity-10-lin
+    if args.scm_class == 'sanity-10-lin':
+      partial_order = [[0, 4, 6], [1, 7], [2, 8], [3, 5], [9]]
+      confounding = [False, False, False, True, False]
     
     #german-credit
     if args.scm_class == 'german-credit':
@@ -339,7 +343,6 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     if args.scm_class == 'adult':
       partial_order = [[0, 1, 2], [3, 4], [5, 6, 7]]
       confounding = [False, True, True]
-
     
 
     shap_values = explainer_symmetric.explain_causal(factial_x, p, ordering=partial_order, confounding=confounding)

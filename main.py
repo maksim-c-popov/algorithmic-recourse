@@ -29,9 +29,9 @@ from explainer import Explainer
 
 
 from random import seed
-#RANDOM_SEED = 54321
-#seed(RANDOM_SEED) # set the random seed so that the random permutations can be reproduced again
-#np.random.seed(RANDOM_SEED)
+RANDOM_SEED = 229
+seed(RANDOM_SEED) # set the random seed so that the random permutations can be reproduced again
+np.random.seed(RANDOM_SEED)
 
 
 @Memoize
@@ -92,9 +92,9 @@ def hotTrainRecourseTypes(args, objs, recourse_types):
 if __name__ == "__main__":
 
   parser = argparse.ArgumentParser()
-
+  parser.add_argument('-s', '--scm_class', type=str, default='sanity-10-lin', help='Name of SCM to generate data using (see loadSCM.py)')
   #parser.add_argument('-s', '--scm_class', type=str, default='adult', help='Name of SCM to generate data using (see loadSCM.py)')
-  parser.add_argument('-s', '--scm_class', type=str, default='german-credit', help='Name of SCM to generate data using (see loadSCM.py)')
+  #parser.add_argument('-s', '--scm_class', type=str, default='german-credit', help='Name of SCM to generate data using (see loadSCM.py)')
 
   parser.add_argument('-d', '--dataset_class', type=str, default='synthetic', help='Name of dataset to train explanation model for: german, random, mortgage, twomoon')
   parser.add_argument('-c', '--classifier_class', type=str, default='mlp', help='Model class that will learn data: lr, mlp')
@@ -112,10 +112,10 @@ if __name__ == "__main__":
   parser.add_argument('--num_mc_samples', type=int, default=50)
   parser.add_argument('--debug_flag', type=bool, default=False)
 
-  #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2', 'x3', 'x4', 'x5'])  
+  #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2'])  
   #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2', 'x3', 'x4']) #adult
-  parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2']) #german-credit
-  #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=[''])
+  #parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=['x1', 'x2', 'x5']) #german-credit
+  parser.add_argument('--non_intervenable_nodes', nargs = '+', type=str, default=[''])
 
   parser.add_argument('--sensitive_attribute_nodes', nargs = '+', type=str, default='')
   parser.add_argument('--fair_kernel_type', type=str, default='rbf')
@@ -130,7 +130,7 @@ if __name__ == "__main__":
   parser.add_argument('--grad_descent_epochs', type=int, default=1000)
   parser.add_argument('--epsilon_boundary', type=int, default=0.10, help='we only consider instances that are negatively predicted and at least epsilon_boundary prob away from decision boundary (too restrictive = smaller `batch_number` possible w/ fixed `num_train_samples`).')
   parser.add_argument('--batch_number', type=int, default=0)
-  parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
+  parser.add_argument('--sample_count', type=int, default=100, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
   #parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
 
   args = parser.parse_args()
