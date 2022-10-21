@@ -123,7 +123,7 @@ if __name__ == "__main__":
   parser.add_argument('--max_intervention_cardinality', type=int, default=100)
 
   parser.add_argument('--max_shap_intervention_cardinality', type=int, default=100)
-  parser.add_argument('--attempts_per_sample', type=int, default=5)
+  parser.add_argument('--attempts_per_sample', type=int, default=3)
   
   parser.add_argument('--optimization_approach', type=str, default='grad_descent')
   parser.add_argument('--grid_search_bins', type=int, default=10)
@@ -153,11 +153,6 @@ if __name__ == "__main__":
   experiment_folder_name = f"_experiments/{datetime.now().strftime('%Y.%m.%d_%H.%M.%S')}__{setup_name}"
   args.experiment_folder_name = experiment_folder_name
   os.mkdir(f'{experiment_folder_name}')
-
-  # save all arguments to file
-  args_file = open(f'{experiment_folder_name}/_args.txt','w')
-  for arg in vars(args):
-    print(arg, ':\t', getattr(args, arg), file = args_file)
 
   # only load once so shuffling order is the same
   scm_obj = loadCausalModel(args, experiment_folder_name)
@@ -281,7 +276,7 @@ if __name__ == "__main__":
     end_time = time.time()
     results['total_runtime'] = np.around(end_time - start_time, 3)
     print(f'[INFO] Saving (overwriting) results...\t', end='')
-    pprint(results, open(f'{experiment_folder_name}/_per_instance_results.txt', 'w'))
+    pprint(results, open(f'{experiment_folder_name}/_complete_results.txt', 'w'))
     print(f'done.')
   
   elif args.experiment == 8:

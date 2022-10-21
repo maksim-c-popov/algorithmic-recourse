@@ -2,6 +2,7 @@ import imp
 import os
 import time
 import pickle
+import json
 import numpy as np
 import pandas as pd
 import warnings
@@ -174,19 +175,22 @@ def createAndSaveMetricsTable(per_instance_results, recourse_types, experiment_f
   plt.close()
 
 
-def init_process(args, objs, recourse_types):
+def init_process(args, objs, recourse_types, experiment_folder_name):
   global args_g
   global objs_g
   global recourse_types_g
+  global experiment_folder_name_g
 
   args_g = args
   objs_g = objs
   recourse_types_g = recourse_types
+  experiment_folder_name_g = experiment_folder_name
 
 def recourseProcess(factual_instance):
   global args_g
   global objs_g
   global recourse_types_g
+  global experiment_folder_name_g
 
   enumeration_idx, (key, value) = factual_instance
   factual_instance_idx = f'sample_{key}'
@@ -197,22 +201,12 @@ def recourseProcess(factual_instance):
   factual_instance_obj = Instance(factual_instance, factual_instance_idx)
   ############################################################################
 
-  #folder_path = f'{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}'
-  #if not os.path.exists(folder_path):
-    #os.mkdir(folder_path)
-
   print(f'[INFO] Processing instance `{factual_instance_obj.instance_idx}` (#{enumeration_idx + 1})...')
-
-  #per_instance_results[factual_instance_obj.instance_idx] = {}
-  #per_instance_results[factual_instance_obj.instance_idx]['factual_instance'] = factual_instance_obj.dict('endogenous_and_exogenous')
 
   for recourse_type in recourse_types_g:
 
-    tmp = {}
     save_path = f''#{experiment_folder_name}/_optimization_curves/factual_instance_{factual_instance_obj.instance_idx}/{recourse_type}'
 
-    #start_time = time.time()
-    #best_shap_index, shap_result_diff_best, gain_in_time, shap_found, total_num_of_res = action_set_processing.computeOptimalActionSet(
     result = action_set_processing.computeOptimalActionSet(
       args_g,
       objs_g,
@@ -220,43 +214,23 @@ def recourseProcess(factual_instance):
       save_path,
       recourse_type,
     )
+    
+    result_shap_places, result_differences, gains_in_time, shap_found, total_num_of_places = result
+
+    per_instance_results = {}
+    per_instance_results["result_shap_places"] = result_shap_places
+    per_instance_results["total_num_of_places"] = total_num_of_places
+    per_instance_results["result_differences"] = result_differences
+    per_instance_results["gains_in_time"] = gains_in_time
+    per_instance_results["shap_found"] = shap_found
+    per_instance_results["mean_place_of_shap_set"] = np.nanmean(np.array(result_shap_places))
+    per_instance_results["mean_difference_with_best"] = np.nanmean(np.array(result_differences))
+    per_instance_results["mean_gains_in_time"] = np.nanmean(np.array(gains_in_time))
+
+
+    json.dump(per_instance_results, open(f'{experiment_folder_name_g}/_per_instance_results_{enumeration_idx}.txt', 'w'))
 
     print(f'[INFO] Finished processing instance `{factual_instance_obj.instance_idx}` (#{enumeration_idx + 1})...')
-    #tmp['optimal_action_set'] = opt_set
-    #tmp['full_set'] = full_set
-    #tmp['shap_vals'] = shap_vals
-    #tmp['shap_set'] = shap_set
-    #end_time = time.time()
-
-    #tmp['default_to_MO'] = False
-
-
-    #tmp['runtime'] = np.around(end_time - start_time, 3)
-
-    #tmp['scf_validity']  = utils.isPointConstraintSatisfied(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm0_true')
-    #try:
-      # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
-    #  tmp['ic_m2_true'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], 'm2_true'), 3)
-    #except:
-    #  tmp['ic_m2_true'] = np.NaN
-
-    #try:
-      # TODO (highpri): twins of adult may mess up: the twin has a pred of 0.45 (negative, but negative enough) etc.
-    #  if recourse_type in global_vars.ACCEPTABLE_DISTR_RECOURSE and recourse_type != 'm2_true':
-    #    tmp['ic_rec_type'] = np.around(utils.computeLowerConfidenceBound(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], recourse_type), 3)
-    #  else:
-    #    tmp['ic_rec_type'] = np.NaN
-   # except:
-   #  tmp['ic_rec_type'] = np.NaN
-
-    #if args_g.classifier_class in global_vars.FAIR_MODELS:
-      # to somewhat allow for comparison of cost_valid and dist_to_db in fair experiments, do not normalize the former
-   #   tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'], range_normalized=False)
-   # else:
-    #  tmp['cost_all'] = action_set_processing.measureActionSetCost(args_g, objs_g, factual_instance_obj, tmp['optimal_action_set'])
-
-    #tmp['cost_valid'] = tmp['cost_all'] if tmp['scf_validity'] else np.NaN
-    #tmp['dist_to_db'] = measureDistanceToDecisionBoundary(args_g, objs_g, factual_instance_obj)
 
     return result
 
@@ -265,7 +239,7 @@ def runRecourseExperiment(args, objs, experiment_folder_name, experimental_setup
 
   per_instance_results = {}
 
-  with Pool(initializer=init_process, initargs=(args, objs, recourse_types,)) as pool:
+  with Pool(initializer=init_process, initargs=(args, objs, recourse_types, experiment_folder_name,)) as pool:
     # issue tasks into the process pool
     result_shap_places, result_differences, gains_in_time, shap_found, total_num_of_places = zip(*pool.map(recourseProcess, enumerate(factual_instances_dict.items())))
 
