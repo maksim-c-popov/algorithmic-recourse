@@ -29,7 +29,7 @@ from explainer import Explainer
 
 
 from random import seed
-RANDOM_SEED = 229
+RANDOM_SEED = 25
 seed(RANDOM_SEED) # set the random seed so that the random permutations can be reproduced again
 np.random.seed(RANDOM_SEED)
 
@@ -105,8 +105,8 @@ if __name__ == "__main__":
   parser.add_argument('--experimental_setups', nargs = '+', type=str, default=['m0_true'])
   parser.add_argument('--norm_type', type=int, default=2)
   parser.add_argument('--lambda_lcb', type=float, default=2.5)
-  parser.add_argument('--num_train_samples', type=int, default=250)
-  parser.add_argument('--num_validation_samples', type=int, default=250)
+  parser.add_argument('--num_train_samples', type=int, default=750)
+  parser.add_argument('--num_validation_samples', type=int, default=750)
   parser.add_argument('--num_display_samples', type=int, default=25)
   parser.add_argument('--num_fair_samples', type=int, default=10, help='number of negatively predicted samples selected from each of sensitive attribute groups (e.g., for `adult`: `num_train_samples` = 1500, `batch_number` = 0, `sample_count` = 1200, and `num_fair_samples` = 10).')
   parser.add_argument('--num_mc_samples', type=int, default=50)
@@ -123,7 +123,7 @@ if __name__ == "__main__":
   parser.add_argument('--max_intervention_cardinality', type=int, default=100)
 
   parser.add_argument('--max_shap_intervention_cardinality', type=int, default=100)
-  parser.add_argument('--attempts_per_sample', type=int, default=3)
+  parser.add_argument('--attempts_per_sample', type=int, default=2)
   parser.add_argument('--results_every_sample', type=bool, default=True)
   
   parser.add_argument('--optimization_approach', type=str, default='grad_descent')
@@ -131,7 +131,7 @@ if __name__ == "__main__":
   parser.add_argument('--grad_descent_epochs', type=int, default=1000)
   parser.add_argument('--epsilon_boundary', type=int, default=0.10, help='we only consider instances that are negatively predicted and at least epsilon_boundary prob away from decision boundary (too restrictive = smaller `batch_number` possible w/ fixed `num_train_samples`).')
   parser.add_argument('--batch_number', type=int, default=0)
-  parser.add_argument('--sample_count', type=int, default=100, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
+  parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
   #parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
 
   args = parser.parse_args()
@@ -177,6 +177,10 @@ if __name__ == "__main__":
     'scm_obj': scm_obj,
     'dataset_obj': dataset_obj,
   })
+
+
+  hehe = list(objs.scm_obj.getTopologicalOrdering())
+
 
   # for fair models, the classifier depends on the {dataset, scm}_objs
   classifier_obj = loadClassifier(args, objs, experiment_folder_name)
@@ -271,14 +275,7 @@ if __name__ == "__main__":
     experiments.runSubPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
   
   elif args.experiment == 6:
-    experiments.runBoxPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
-    
-    results = experiments.runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
-    end_time = time.time()
-    results['total_runtime'] = np.around(end_time - start_time, 3)
-    print(f'[INFO] Saving (overwriting) results...\t', end='')
-    pprint(results, open(f'{experiment_folder_name}/_complete_results.txt', 'w'))
-    print(f'done.')
+    experiments.runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
   
   elif args.experiment == 8:
     experiments.runBoxPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)

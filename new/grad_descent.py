@@ -200,15 +200,15 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
     # CONSTRUCT COMPUTATION GRAPH
     # ========================================================================
     
-    if len(action_set_ts_comb) > 0:
-      for i, tmp_action_set_ts in enumerate(action_set_ts_comb):
-        next_node = list(action_set_ts.keys())[i + 1]
-        tmp_samples_ts = sampling._sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, tmp_action_set_ts, recourse_type, next_node)
+  #  if len(action_set_ts_comb) > 0:
+   #   for i, tmp_action_set_ts in enumerate(action_set_ts_comb):
+    #    next_node = list(action_set_ts.keys())[i + 1]
+     #   tmp_samples_ts = sampling._sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, tmp_action_set_ts, recourse_type, next_node)
+#
+ #       ts_next_node_mean = torch.mean(tmp_samples_ts, 0)
+  #      ts_next_node_new_val = ts_next_node_mean[sampling.getColumnIndicesFromNames(args, objs, [next_node])[0]]
 
-        ts_next_node_mean = torch.mean(tmp_samples_ts, 0)
-        ts_next_node_new_val = ts_next_node_mean[sampling.getColumnIndicesFromNames(args, objs, [next_node])[0]]
-
-        factual_instance_upd_ts[next_node] = ts_next_node_new_val
+   #     factual_instance_upd_ts[next_node] = ts_next_node_new_val
 
     last_node = list(objs.scm_obj.getTopologicalOrdering())[-1]
     samples_ts = sampling._sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, action_set_ts, recourse_type, last_node)

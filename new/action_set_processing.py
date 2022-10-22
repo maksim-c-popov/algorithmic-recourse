@@ -304,23 +304,8 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     #X_all = utils.getOriginalDataFrame(objs, args.num_train_samples + args.num_validation_samples)
     Y_all = pd.concat([Y_train, Y_test], axis = 0)
 
-   # explainer = shap.Explainer(objs.classifier_obj.predict, X_all)
-
-    factial_x = pd.DataFrame([factual_instance_obj.dict()])
-
-  #  shap_values_old = explainer(factial_x)
-
-
-    #print(list(objs.scm_obj.getTopologicalOrdering()))
-    #print(shap_values)
-
 
     ######################################################################################
-
-    #print(objs.classifier_obj.predict(X_all.head(20)))
-
-    explainer_symmetric = Explainer(X_all, objs.classifier_obj)
-
     
     p = sum(Y_all) / len(Y_all)
     #p = Y_train.mean()    
@@ -333,6 +318,11 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     if args.scm_class == 'sanity-10-lin':
       partial_order = [[0, 4, 6], [1, 7], [2, 8], [3, 5], [9]]
       confounding = [False, False, False, True, False]
+
+    #sanity-12-lin
+    if args.scm_class == 'sanity-12-lin':
+      partial_order = [[0, 1, 2, 3], [4, 5, 6], [7, 8], [9], [10], [11]]
+      confounding = [False, True, True, False, False, False]
     
     #german-credit
     if args.scm_class == 'german-credit':
@@ -344,14 +334,9 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
       partial_order = [[0, 1, 2], [3, 4], [5, 6, 7]]
       confounding = [False, True, True]
     
-
-    shap_values = explainer_symmetric.explain_causal(factial_x, p, ordering=partial_order, confounding=confounding)
+    factial_x = pd.DataFrame([factual_instance_obj.dict()])
 
     #print(explanation_causal)
-
-    ######################################################################################
-
-
 
     intervenable_nodes = np.setdiff1d(
     objs.dataset_obj.getInputAttributeNames('kurz'),
@@ -362,32 +347,26 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
       )
     ))
 
-    relevant_indexes = [shap_values[0].feature_names.index(el) for el in intervenable_nodes]
+    ############################ CAUSAL TOP N/2 ############################
 
+    explainer_symmetric = Explainer(X_all, objs.classifier_obj)
+    shap_values = explainer_symmetric.explain_causal(factial_x, p, ordering=partial_order, confounding=confounding)
+
+    relevant_indexes = [shap_values[0].feature_names.index(el) for el in intervenable_nodes]
     relevant_shap_values = list(np.array(list(zip(shap_values[0].feature_names, abs(shap_values[0].values))))[relevant_indexes])
     relevant_shap_values.sort(key=lambda x: x[1], reverse=True)
-
     relevant_shap_feature_names = [x[0] for x in relevant_shap_values]
 
     shap_action_sets = []
     shap_set_lenght = min(len(relevant_shap_values), args.max_shap_intervention_cardinality)
-    
     shap_top_lenght = round((shap_set_lenght + 1)/2)
-
 
     for L in range(1, shap_top_lenght + 1):
       for subset in itertools.combinations(relevant_shap_feature_names[:shap_top_lenght], L):
         shap_action_sets.append(set(subset))
 
-
     for i in range(shap_top_lenght + 1, shap_set_lenght + 1):
       shap_action_sets.append(set(relevant_shap_feature_names[:i]))
-    
-    #print('relevant shap values:')
-    #print(relevant_shap_values)
-    #print('shap intervention_sets:')
-    #print(shap_action_sets)
-    #print('====================')
 
     best_shap_index = np.nan
     shap_result_diff_best = np.nan
@@ -406,12 +385,78 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
           else (ordered_action_costs[best_shap_index] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0])
         gain_in_time = sum(ordered_time_calc) / sum([ordered_time_calc[x] for x in shap_results])
         total_num_of_places = len(result_best_costs)
-        #print(best_shap_index)
-        #print(shap_result_diff_best)\
       else:
         shap_found = False
+
+    ############################# CAUSAL TOP 1 #############################
+
+    top1_shap_action_sets = []
+    shap_set_lenght = min(len(relevant_shap_values), args.max_shap_intervention_cardinality)
+    shap_top_lenght = 1
+
+    for L in range(1, shap_top_lenght + 1):
+      for subset in itertools.combinations(relevant_shap_feature_names[:shap_top_lenght], L):
+        top1_shap_action_sets.append(set(subset))
+
+    for i in range(shap_top_lenght + 1, shap_set_lenght + 1):
+      top1_shap_action_sets.append(set(relevant_shap_feature_names[:i]))
+
+    top1_best_shap_index = np.nan
+    top1_shap_result_diff_best = np.nan
+    top1_gain_in_time = np.nan
+
+    if len(result_sets_with_cost) > 0:
+      ordered_action_costs, ordered_time_calc, ordered_action_sets = zip(*[(x[0], x[1], set(x[2].keys())) for x in result_sets_with_cost])
+      
+      shap_results = [ordered_action_sets.index(shap_act_set) for shap_act_set in top1_shap_action_sets if shap_act_set in ordered_action_sets]
+
+      if len(shap_results) > 0:
+        top1_best_shap_index = min(shap_results)
+        top1_shap_result_diff_best = 0 if (ordered_action_costs[-1] == ordered_action_costs[0]) \
+          else (ordered_action_costs[top1_best_shap_index] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0])
+        top1_gain_in_time = sum(ordered_time_calc) / sum([ordered_time_calc[x] for x in shap_results])
+
+    ############################## NOT CAUSAL ##############################
+
+    explainer = shap.Explainer(objs.classifier_obj.predict, X_all)
+    nc_shap_values = explainer(factial_x)
+
+    nc_relevant_indexes = [nc_shap_values[0].feature_names.index(el) for el in intervenable_nodes]
+    nc_relevant_shap_values = list(np.array(list(zip(nc_shap_values[0].feature_names, abs(nc_shap_values[0].values))))[nc_relevant_indexes])
+    nc_relevant_shap_values.sort(key=lambda x: x[1], reverse=True)
+    nc_relevant_shap_feature_names = [x[0] for x in nc_relevant_shap_values]
+
+    nc_shap_action_sets = []
+    nc_shap_set_lenght = min(len(nc_relevant_shap_values), args.max_shap_intervention_cardinality)
+    nc_shap_top_lenght = round((nc_shap_set_lenght + 1)/2)
+
+    for L in range(1, nc_shap_top_lenght + 1):
+      for subset in itertools.combinations(nc_relevant_shap_feature_names[:nc_shap_top_lenght], L):
+        nc_shap_action_sets.append(set(subset))
+
+    for i in range(nc_shap_top_lenght + 1, nc_shap_set_lenght + 1):
+      nc_shap_action_sets.append(set(nc_relevant_shap_feature_names[:i]))
+
+    nc_best_shap_index = np.nan
+    nc_shap_result_diff_best = np.nan
+
+    if len(result_sets_with_cost) > 0:
+      ordered_action_costs, ordered_time_calc, ordered_action_sets = zip(*[(x[0], x[1], set(x[2].keys())) for x in result_sets_with_cost])
+      
+      shap_results = [ordered_action_sets.index(shap_act_set) for shap_act_set in nc_shap_action_sets if shap_act_set in ordered_action_sets]
+
+      if len(shap_results) > 0:
+        nc_best_shap_index = min(shap_results)
+        nc_shap_result_diff_best = 0 if (ordered_action_costs[-1] == ordered_action_costs[0]) \
+          else (ordered_action_costs[nc_best_shap_index] - ordered_action_costs[0]) / (ordered_action_costs[-1] - ordered_action_costs[0])
+
+    ######################################################################################
 
   else:
     raise Exception(f'{args.optimization_approach} not recognized.')
 
-  return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found, total_num_of_places)
+  causal_shap_res = (best_shap_index, shap_result_diff_best, gain_in_time, shap_found, total_num_of_places)
+  causal_top1_shap_res = (top1_best_shap_index, top1_shap_result_diff_best, top1_gain_in_time)
+  regular_shap_res = (nc_best_shap_index, nc_shap_result_diff_best)
+
+  return (causal_shap_res, causal_top1_shap_res, regular_shap_res)

@@ -31,4 +31,11 @@ if __name__ == "__main__":
     total_result["mean_difference_with_best"] = np.nanmean(np.array(total_result['result_differences']))
     total_result["mean_gains_in_time"] = np.nanmean(np.array(total_result['gains_in_time']))
 
-    pprint(total_result, open(f'{experiments_folder}/{last_folder}/_interrupted_results.txt', 'w'))
+    total_result["mean_place_of_shap_set_top1"] = np.nanmean(np.array(total_result['result_top1_shap_places']))
+    total_result["mean_difference_with_best_top1"] = np.nanmean(np.array(total_result['result_top1_differences']))
+    total_result["mean_gains_in_time_top1"] = np.nanmean(np.array(total_result['top1_gain_in_time']))
+
+    total_result["mean_place_of_shap_set_nc"] = np.nanmean(np.array(total_result['result_nc_shap_places']))
+    total_result["mean_difference_with_best_nc"] = np.nanmean(np.array(total_result['nc_result_differences']))
+
+    pprint(total_result, open(f'{experiments_folder}/{last_folder}/_all_results.txt', 'w'))

@@ -143,6 +143,38 @@ def loadSCM(scm_class, experiment_folder_name = None):
       'u3': Normal(0, 1),
     }
 
+  elif scm_class == 'sanity-12-lin':
+
+    structural_equations_np = {
+      'x1': lambda n_samples,: n_samples,
+      'x2': lambda n_samples,: n_samples,
+      'x3': lambda n_samples,: n_samples,
+      'x4': lambda n_samples,: n_samples,
+      'x5': lambda n_samples, x1, x2: x1 + 2 * x2 + n_samples,
+      'x6': lambda n_samples, x1, x3: 2 * x1 + 2 * x3 + n_samples,
+      'x7': lambda n_samples, x2, x3, x4: 3 * x2 - x4 + 2 * x3 + n_samples,
+      'x8': lambda n_samples, x1, x3, x4, x5: x3 + x4 - x5 + x1 + n_samples,
+      'x9': lambda n_samples, x1, x2, x5, x6, x7: x1 + x2 - x5 + x7 - x6 + n_samples,
+      'x10': lambda n_samples, x6, x7, x9: x6 + x7 - 2 * x9 + n_samples,
+      'x11': lambda n_samples, x1, x3, x6, x8, x10: x3 + x1 - x6 - x8 + 3 * x10 + n_samples,
+      'x12': lambda n_samples, x6, x7, x9, x11: x6 + x7 - 2 * x9 - x11 + n_samples,
+    }
+    structural_equations_ts = structural_equations_np
+    noises_distributions = {
+      'u1': MixtureOfGaussians([0.5, 0.5], [-2, +2], [1, 1]),
+      'u2': MixtureOfGaussians([0.5, 0.5], [-2, +2], [1, 1]),
+      'u3': MixtureOfGaussians([0.5, 0.5], [-2, +2], [1, 1]),
+      'u4': MixtureOfGaussians([0.5, 0.5], [-2, +2], [1, 1]),
+      'u5': Normal(0, 2),
+      'u6': Normal(0, 2),
+      'u7': Normal(0, 2),
+      'u8': Normal(0, 2),
+      'u9': Normal(0, 2),
+      'u10': Normal(0, 2),
+      'u11': Normal(0, 2),
+      'u12': Normal(0, 2),
+    }
+
   elif scm_class == 'sanity-10-lin':
 
     structural_equations_np = {
@@ -163,12 +195,12 @@ def loadSCM(scm_class, experiment_folder_name = None):
     structural_equations_ts = structural_equations_np
     noises_distributions = {
       'u1': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
-      'u2': Normal(0, 1),
-      'u3': Normal(0, 1),
+      'u2': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
+      'u3': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
       'u4': Normal(0, 1),
-      'u5': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
+      'u5': Normal(0, 1),
       'u6': Normal(0, 1),
-      'u7': MixtureOfGaussians([0.5, 0.5], [-2, +1], [1.5, 1]),
+      'u7': Normal(0, 1),
       'u8': Normal(0, 1),
       'u9': Normal(0, 1),
       'u10':Normal(0, 1),
