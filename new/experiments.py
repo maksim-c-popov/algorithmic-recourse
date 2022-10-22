@@ -217,18 +217,20 @@ def recourseProcess(factual_instance):
     
     result_shap_places, result_differences, gains_in_time, shap_found, total_num_of_places = result
 
-    per_instance_results = {}
-    per_instance_results["result_shap_places"] = result_shap_places
-    per_instance_results["total_num_of_places"] = total_num_of_places
-    per_instance_results["result_differences"] = result_differences
-    per_instance_results["gains_in_time"] = gains_in_time
-    per_instance_results["shap_found"] = shap_found
-    per_instance_results["mean_place_of_shap_set"] = np.nanmean(np.array(result_shap_places))
-    per_instance_results["mean_difference_with_best"] = np.nanmean(np.array(result_differences))
-    per_instance_results["mean_gains_in_time"] = np.nanmean(np.array(gains_in_time))
+    if (args_g.results_every_sample):
+
+      per_instance_results = {}
+      per_instance_results["result_shap_places"] = result_shap_places
+      per_instance_results["total_num_of_places"] = total_num_of_places
+      per_instance_results["result_differences"] = result_differences
+      per_instance_results["gains_in_time"] = gains_in_time
+      per_instance_results["shap_found"] = shap_found
+      per_instance_results["mean_place_of_shap_set"] = np.nanmean(np.array(result_shap_places))
+      per_instance_results["mean_difference_with_best"] = np.nanmean(np.array(result_differences))
+      per_instance_results["mean_gains_in_time"] = np.nanmean(np.array(gains_in_time))
 
 
-    json.dump(per_instance_results, open(f'{experiment_folder_name_g}/_per_instance_results_{enumeration_idx}.txt', 'w'))
+      json.dump(per_instance_results, open(f'{experiment_folder_name_g}/_per_instance_results_{enumeration_idx}.txt', 'w'))
 
     print(f'[INFO] Finished processing instance `{factual_instance_obj.instance_idx}` (#{enumeration_idx + 1})...')
 

@@ -124,6 +124,7 @@ if __name__ == "__main__":
 
   parser.add_argument('--max_shap_intervention_cardinality', type=int, default=100)
   parser.add_argument('--attempts_per_sample', type=int, default=3)
+  parser.add_argument('--results_every_sample', type=bool, default=True)
   
   parser.add_argument('--optimization_approach', type=str, default='grad_descent')
   parser.add_argument('--grid_search_bins', type=int, default=10)
