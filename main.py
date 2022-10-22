@@ -29,7 +29,7 @@ from explainer import Explainer
 
 
 from random import seed
-RANDOM_SEED = 229
+RANDOM_SEED = 1
 seed(RANDOM_SEED) # set the random seed so that the random permutations can be reproduced again
 np.random.seed(RANDOM_SEED)
 
@@ -92,7 +92,7 @@ def hotTrainRecourseTypes(args, objs, recourse_types):
 if __name__ == "__main__":
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('-s', '--scm_class', type=str, default='sanity-10-lin', help='Name of SCM to generate data using (see loadSCM.py)')
+  parser.add_argument('-s', '--scm_class', type=str, default='sanity-3-sec', help='Name of SCM to generate data using (see loadSCM.py)')
   #parser.add_argument('-s', '--scm_class', type=str, default='adult', help='Name of SCM to generate data using (see loadSCM.py)')
   #parser.add_argument('-s', '--scm_class', type=str, default='german-credit', help='Name of SCM to generate data using (see loadSCM.py)')
 
@@ -123,15 +123,15 @@ if __name__ == "__main__":
   parser.add_argument('--max_intervention_cardinality', type=int, default=100)
 
   parser.add_argument('--max_shap_intervention_cardinality', type=int, default=100)
-  parser.add_argument('--attempts_per_sample', type=int, default=3)
-  parser.add_argument('--results_every_sample', type=bool, default=True)
+  parser.add_argument('--attempts_per_sample', type=int, default=1)
+  parser.add_argument('--check_orders', type=bool, default=True)
   
   parser.add_argument('--optimization_approach', type=str, default='grad_descent')
   parser.add_argument('--grid_search_bins', type=int, default=10)
   parser.add_argument('--grad_descent_epochs', type=int, default=1000)
   parser.add_argument('--epsilon_boundary', type=int, default=0.10, help='we only consider instances that are negatively predicted and at least epsilon_boundary prob away from decision boundary (too restrictive = smaller `batch_number` possible w/ fixed `num_train_samples`).')
   parser.add_argument('--batch_number', type=int, default=0)
-  parser.add_argument('--sample_count', type=int, default=100, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
+  parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
   #parser.add_argument('--sample_count', type=int, default=50, help='number of negatively predicted samples chosen in this batch (must be less, and often ~50% of `num_train_samples`')
 
   args = parser.parse_args()
@@ -271,14 +271,8 @@ if __name__ == "__main__":
     experiments.runSubPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
   
   elif args.experiment == 6:
-    experiments.runBoxPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
-    
-    results = experiments.runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
-    end_time = time.time()
-    results['total_runtime'] = np.around(end_time - start_time, 3)
-    print(f'[INFO] Saving (overwriting) results...\t', end='')
-    pprint(results, open(f'{experiment_folder_name}/_complete_results.txt', 'w'))
-    print(f'done.')
+   # experiments.runBoxPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
+    experiments.runRecourseExperiment(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)
   
   elif args.experiment == 8:
     experiments.runBoxPlotSanity(args, objs, experiment_folder_name, experimental_setups, factual_instances_dict, recourse_types)

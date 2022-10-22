@@ -27,8 +27,9 @@ if __name__ == "__main__":
         for key, value in res.items():
                 total_result[key].append(value)
 
-    total_result["mean_place_of_shap_set"] = np.nanmean(np.array(total_result['result_shap_places']))
-    total_result["mean_difference_with_best"] = np.nanmean(np.array(total_result['result_differences']))
-    total_result["mean_gains_in_time"] = np.nanmean(np.array(total_result['gains_in_time']))
+    total_result["_mean_place_of_shap_set"] = np.nanmean(np.array(total_result['result_shap_places']))
+    total_result["_mean_difference_with_best"] = np.nanmean(np.array(total_result['result_differences']))
+    total_result["_mean_gains_in_time"] = np.nanmean(np.array(total_result['gains_in_time']))
+    total_result["_mean_cost"] = np.nanmean(np.array(total_result['min_cost']))
 
-    pprint(total_result, open(f'{experiments_folder}/{last_folder}/_interrupted_results.txt', 'w'))
+    pprint(total_result, open(f'{experiments_folder}/{last_folder}/_all_results.txt', 'w'))

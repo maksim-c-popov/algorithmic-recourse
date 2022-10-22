@@ -229,13 +229,13 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
     for intervention_set in valid_intervention_sets:      
 
       interv_set_orders = itertools.cycle(itertools.permutations(intervention_set, len(intervention_set)))
+      num_of_possible_orders = len(list(itertools.permutations(intervention_set, len(intervention_set)))) if args.check_orders else 1
 
       start_time = time.time()
       cost_of_attempts = []
-      for _ in range(args.attempts_per_sample):
+      for _ in range(args.attempts_per_sample * num_of_possible_orders):
         
         intervention_set = next(interv_set_orders)
-        #print('intervention set: ' + str(intervention_set))
         
         action_set, recourse_satisfied, cost_of_action_set = grad_descent.performGDOptimization(args, objs, factual_instance_obj, save_path, intervention_set, recourse_type)
 
@@ -246,27 +246,8 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
                                     # performGradDescentOptimization() both agree
                                     # that recourse has been satisfied
 
-
-
-
-
-
-
-
-#          assert np.isclose( # won't be exact becuase the former is float32 tensor
- ##           cost_of_action_set,
- #           measureActionSetCost(args, objs, factual_instance_obj, action_set),
- #           atol = 1e-2,
-  #        )
-
-
-
-
-
-
         if recourse_satisfied:
-          cost_of_attempts.append(cost_of_action_set)
-
+          cost_of_attempts.append((cost_of_action_set, action_set))
       
       #print(str(args.attempts_per_sample) + ' attemps for the factual instance finished')
       #print(cost_of_attempts)
@@ -276,16 +257,16 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
 
         end_time = time.time()
 
-        result_action_sets.append(action_set)
+        best_attempt_cost, best_attempt_action_set = min(cost_of_attempts, key = lambda t: t[0])
 
-        best_attempt_cost = min(cost_of_attempts)
+        result_action_sets.append(best_attempt_action_set)
 
         result_best_costs.append(best_attempt_cost)
         result_time_calc.append(np.around((end_time - start_time) / args.attempts_per_sample, 3))
 
         if best_attempt_cost < min_cost:
           min_cost = best_attempt_cost
-          min_cost_action_set = action_set
+          min_cost_action_set = best_attempt_action_set
 
 
     #print('====================')
@@ -414,4 +395,4 @@ def computeOptimalActionSet(args, objs, factual_instance_obj, save_path, recours
   else:
     raise Exception(f'{args.optimization_approach} not recognized.')
 
-  return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found, total_num_of_places)
+  return (best_shap_index, shap_result_diff_best, gain_in_time, shap_found, total_num_of_places, min_cost)

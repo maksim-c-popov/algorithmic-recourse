@@ -200,7 +200,7 @@ def performGDOptimization(args, objs, factual_instance_obj, save_path, intervent
     # CONSTRUCT COMPUTATION GRAPH
     # ========================================================================
     
-    if len(action_set_ts_comb) > 0:
+    if args.check_orders and len(action_set_ts_comb) > 0:
       for i, tmp_action_set_ts in enumerate(action_set_ts_comb):
         next_node = list(action_set_ts.keys())[i + 1]
         tmp_samples_ts = sampling._sampleInnerLoopTensor(args, objs, factual_instance_obj, factual_instance_ts, tmp_action_set_ts, recourse_type, next_node)
